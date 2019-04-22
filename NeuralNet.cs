@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,7 +13,7 @@ namespace ChessNN
     /// Currently non-disposable, should be fixed.
     /// </summary>
     [Serializable]
-    public class NeuralNet
+    public class NeuralNet : IDisposable
     {
         public Player Player { get; set; }
         public List<Neuron> Neurons = new List<Neuron>();
@@ -221,7 +221,7 @@ namespace ChessNN
             
 
             Console.WriteLine("Done");
-            b.Dispose(); b2.Dispose();
+            b.Dispose(); b2.Dispose(); NNW.Dispose(); NNB.Dispose();
             b = new Board(PW, PB, new Piece[8, 8], true);
             b.Pieces = Board.initBoard(b);
             Play(b);
@@ -279,7 +279,7 @@ namespace ChessNN
                 if (Vals[i] > Vals[0]) { Vals[0] = Vals[i]; Boards[i] = starterBoards[i]; }
                 else { Boards[i].Dispose(); }
             }
-            return starterBoards[0];
+            notMe.Dispose(); return starterBoards[0]; 
         }
         public Dictionary<Board, double> refineMoves(Dictionary<Board, double> Moves, int Depth)
         {
@@ -441,6 +441,41 @@ namespace ChessNN
             }
             return Moves;
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~NeuralNet() {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
     }
     [Serializable]
     public class Neuron

@@ -10,7 +10,6 @@ namespace ChessNN
     /// A Neural network
     /// 
     /// Weights are set to null in 1 of the layer 0 neurons, and in all of the >layer 0 neurons
-    /// Currently non-disposable, should be fixed.
     /// </summary>
     [Serializable]
     public class NeuralNet : IDisposable

@@ -1,0 +1,12 @@
+Queen
+9 
+Rook
+5 
+Empty
+0 
+Bishop
+3 
+Pawn
+1 
+Knight
+3

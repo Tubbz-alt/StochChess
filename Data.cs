@@ -73,18 +73,39 @@ namespace ChessNN
                     //fs.Position++;
                     int.TryParse(splitLine[1], out int result);
                     Neuron n = new Neuron(NN, 0, result);
-                    for (int j = 0; j <= 7; j++)
+                    //Flip it if it's black to match board perspective
+                    if (NN.Player.IsW)
                     {
-                        line = sr.ReadLine();
-                        splitLine = line.Split(' ');
                         for (int i = 0; i <= 7; i++)
                         {
-                            try
+                            line = sr.ReadLine();
+                            splitLine = line.Split(' ');
+                            for (int ii = 0; ii <= 7; ii++)
                             {
-                                double.TryParse(splitLine[i], out double result2);
-                                n.weights[j, i] = result2;
+                                try
+                                {
+                                    double.TryParse(splitLine[ii], out double result2);
+                                    n.weights[i, ii] = result2;
+                                }
+                                catch (Exception ex) { Console.WriteLine(ex); }
                             }
-                            catch { }
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 7; i >= 0; i--)
+                        {
+                            line = sr.ReadLine();
+                            splitLine = line.Split(' ');
+                            for (int ii = 0; ii <= 7; ii++)
+                            {
+                                try
+                                {
+                                    double.TryParse(splitLine[ii], out double result2);
+                                    n.weights[i, ii] = result2;
+                                }
+                                catch (Exception ex) { Console.WriteLine(ex); }
+                            }
                         }
                     }
                 }
@@ -137,7 +158,6 @@ namespace ChessNN
                 else
                 {
                     int count = 1;
-                    //Layweights are all the same?
                     foreach (KeyValuePair<Neuron, double> kvp in n.layWeights)
                     {
                         sw.Write(Math.Abs(kvp.Value).ToString());

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace ChessNN
 {
@@ -11,6 +12,8 @@ namespace ChessNN
         public bool WTurn = true;
         public bool WWin = false;
         public bool BWin = false;
+        public bool WCheck = false;
+        public bool BCheck = false;
         public Board(Player p1, Player p2, Piece[,] pieces, bool wturn)
         {
             P1 = p1; P2 = p2; Pieces = pieces; WTurn = wturn;
@@ -60,7 +63,168 @@ namespace ChessNN
             return tempPieces;
         }
         
+        /// <summary>
+        /// Checks if one is in check
+        /// </summary>
+        /// <param isW?="isW"></param>
+        /// <returns></returns>
+        public bool amICheck(bool isW)
+        {
+            if (isW) { if (WCheck) { return true; } }
+            else { if (BCheck) { return true; } }
+            return false;
+        }
 
+        /// <summary>
+        /// [OLD] Update the check values for each king
+        /// </summary>
+        /*
+        public void Checks()
+        {
+            WCheck = true; BCheck = true;
+            foreach (Piece p in Pieces)
+            {
+                if (p is King)
+                {
+                    if (p.Player.IsW) { WCheck = false; }
+                    else { BCheck = false; }
+                }
+            }
+        }
+        */
+
+        /// <summary>
+        /// Check if king is in check
+        /// </summary>
+        public void Checks(bool isW)
+        {
+            WCheck = false; BCheck = false;
+            foreach (Piece p in Pieces)
+            {
+                //Must be done in this SUPER verbose manner to prevent it registering pieces as threats from behind others (it has to break each loop separately)
+                if (p is King && p.Player.IsW == isW)
+                {
+                    //Orthagonal
+
+                    //left
+                    for (int ii = 0; ii <= 7; ii++)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX + ii, p.PosY].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX + ii, p.PosY] is Pawn) { break; }
+                            if (Pieces[p.PosX + ii, p.PosY] is Rook || Pieces[p.PosX + ii, p.PosY] is Queen || Pieces[p.PosX + ii, p.PosY] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        //If it hits the sides, break;
+                        catch { break; }
+                    }
+                    //right
+                    for (int ii = 0; ii >= -7; ii--)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX + ii, p.PosY].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX + ii, p.PosY] is Pawn) { break; }
+                            if (Pieces[p.PosX + ii, p.PosY] is Rook || Pieces[p.PosX + ii, p.PosY] is Queen || Pieces[p.PosX + ii, p.PosY] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        catch { break; }
+                    }
+                    //up
+                    for (int ii = 0; ii <= 7; ii++)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX, p.PosY + ii].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX, p.PosY + ii] is Pawn) { break; }
+                            if (Pieces[p.PosX, p.PosY + ii] is Rook || Pieces[p.PosX, p.PosY + ii] is Queen || Pieces[p.PosX, p.PosY + ii] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        catch { break; }
+                    }
+                    //down
+                    for (int ii = 0; ii >= -7; ii--)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX, p.PosY + ii].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX, p.PosY + ii] is Pawn) { break; }
+                            if (Pieces[p.PosX, p.PosY + ii] is Rook || Pieces[p.PosX, p.PosY + ii] is Queen || Pieces[p.PosX, p.PosY + ii] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        catch { break; }
+                    }
+
+                    //Diagonal
+
+                    //up left
+                    for (int ii = 0; ii <= 7; ii++)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX + ii, p.PosY + ii].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX + ii, p.PosY + ii] is Pawn)
+                            {
+                                if (ii == 1 && !p.Player.IsW) { BCheck = true; break; }
+                                else { break; }
+                            }
+                            if (Pieces[p.PosX + ii, p.PosY + ii] is Bishop || Pieces[p.PosX + ii, p.PosY + ii] is Queen || Pieces[p.PosX + ii, p.PosY + ii] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        catch { break; }
+                    }
+                    //up right
+                    for (int ii = 0; ii <= 7; ii++)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX + ii, p.PosY + ii].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX + ii, p.PosY + ii] is Pawn)
+                            {
+                                if (ii == 1 && !p.Player.IsW) { BCheck = true; break; }
+                                else { break; }
+                            }
+                            if (Pieces[p.PosX - ii, p.PosY + ii] is Bishop || Pieces[p.PosX - ii, p.PosY + ii] is Queen || Pieces[p.PosX - ii, p.PosY + ii] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        catch { break; }
+                    }
+                    //down left
+                    for (int ii = 0; ii >= -7; ii--)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX + ii, p.PosY - ii].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX + ii, p.PosY - ii] is Pawn)
+                            {
+                                if (ii == -1 && p.Player.IsW) { WCheck = true; break; }
+                                else { break; }
+                            }
+                            if (Pieces[p.PosX + ii, p.PosY - ii] is Bishop || Pieces[p.PosX + ii, p.PosY - ii] is Queen || Pieces[p.PosX + ii, p.PosY - ii] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        catch { break; }
+                    }
+                    //down right
+                    for (int ii = 0; ii >= -7; ii--)
+                    {
+                        try
+                        {
+                            if (Pieces[p.PosX - ii, p.PosY + ii].Player.IsW == p.Player.IsW) { break; }
+                            if (Pieces[p.PosX - ii, p.PosY + ii] is Pawn)
+                            {
+                                if (ii == -1 && p.Player.IsW) { WCheck = true; break; }
+                                else { break; }
+                            }
+                            if (Pieces[p.PosX - ii, p.PosY + ii] is Bishop || Pieces[p.PosX - ii, p.PosY + ii] is Queen || Pieces[p.PosX - ii, p.PosY + ii] is King)
+                            { if (p.Player.IsW) { WCheck = true; } else { BCheck = true; } break; }
+                        }
+                        catch { break; }
+                    }
+                }
+            }
+        }
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
 

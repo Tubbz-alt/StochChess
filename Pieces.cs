@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -300,7 +300,7 @@ namespace ChessNN
         public King(Player player, int posX, int posY)
         {
             Player = player; PosX = posX; PosY = posY; Name = "king"; LegalX = 1; LegalY = 1; CanCastle = true;
-            CVal = 9999;
+            CVal = 99;
         }
         public override Board Move(Board b, int toX, int toY)
         {

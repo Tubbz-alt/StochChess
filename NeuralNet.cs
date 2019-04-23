@@ -10,6 +10,9 @@ namespace ChessNN
     /// A Neural network
     /// 
     /// Weights are set to null in 1 of the layer 0 neurons, and in all of the >layer 0 neurons
+    /// 
+    /// Bugs:
+    ///     Sometimes allows the king to be taken!
     /// </summary>
     [Serializable]
     public class NeuralNet : IDisposable
@@ -19,7 +22,7 @@ namespace ChessNN
         public Neuron Output { get; set; }
         public int depth { get; set; }
         public int count { get; set; }
-        public int foresight = 2;
+        public int foresight = 4;
         public void initNN()
         {
             try
@@ -98,14 +101,18 @@ namespace ChessNN
                 if (p.Player.IsW != isW) { p.CVal = -Math.Abs(p.CVal); }
                 else { p.CVal = Math.Abs(p.CVal); }
             }
-            double score = 0;
+            //If you don't have a king, then your score is awful!
+            board.Checks(isW);
+            if (board.amICheck(isW)) { return -99999; }
+
             foreach (Neuron n in Neurons)
             {
                 n.computeCVal(values);
                 if (n.layer == 3) { Output = n; }
             }
-            score = Output.currentVal;
-            return score;
+            //Make a position more valuable if it puts the opponent into check
+            if (board.amICheck(!isW)) { Output.currentVal += Output.currentVal * .3000; }
+            return Output.currentVal;
         }
         public static void Play(Board b)
         {
@@ -127,7 +134,7 @@ namespace ChessNN
            
             //Amount of weights to change
             int changeCount = 5;
-            for (int j = 0; j <= changeCount; j++)
+            for (int j = 0; j < changeCount; j++)
             {
                 //For neurons
                 //It increases/decreases the weight by rand.next(x, y)% [normally]
@@ -189,35 +196,33 @@ namespace ChessNN
             }
             
             //At movecap, end playing, and write whoever had a higher score to the weight list file
-            int moveCap = 30;
+            int moveCap = 75;
             int i = 1;
             //While it has not moved too many times, and while no-one has won, play
             //Run in parallel?
+
+            //Why use two boards..?
             while (i <= moveCap && !b.WWin && !b.BWin && !b2.WWin && !b2.BWin)
             {
                 if (b.WTurn) { b2.Pieces = NNW.Move(b, NNW.Player.IsW).Pieces; Board.PrintBoard(b2); b2.WTurn = GoDiePointers.DeepClone(!b.WTurn); i++; }
                 if (!b2.WTurn) { b.Pieces = NNB.Move(b2, NNB.Player.IsW).Pieces; Board.PrintBoard(b); b.WTurn = GoDiePointers.DeepClone(!b2.WTurn); i++; }
                 else { Console.WriteLine("NN Failure"); break; }
             }
-
-            //Will need to check whether pieces write properly in the future
+            //Will need to check whether pieces read/write properly in the future
 
             //If white won, write white's data
             if (b.WWin || b2.WWin) { /*Data.WritePieces(b);*/ Data.WriteNs(NNW); }
+            //If black won, write black's data
+            if (b.BWin || b2.BWin) { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
             else
             {
-                //Elif black won, write black's data
-                if (b.BWin || b2.BWin) { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
-                else
-                {
-                    //If neither won, write the one with a higher (self-percieved) score
-                    //May be encouraging a points arms race, it may be wise to sigmoid the scores?
-                    if (NNW.Score(b, NNW.Player.IsW) > NNB.Score(b, NNB.Player.IsW))
-                    { /*Data.WritePieces(b);*/ Data.WriteNs(NNW); }
-                    else { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
-                }
+                //If neither won, write the one with a higher (self-percieved) score
+                //May be encouraging a points arms race; it may be wise to sigmoid the scores?
+                if (NNW.Score(b, NNW.Player.IsW) > NNB.Score(b, NNB.Player.IsW))
+                { /*Data.WritePieces(b);*/ Data.WriteNs(NNW); }
+                else { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
             }
-            
+
 
             Console.WriteLine("Done");
             b.Dispose(); b2.Dispose(); NNW.Dispose(); NNB.Dispose();
@@ -240,58 +245,78 @@ namespace ChessNN
 
             List<Board> Boards = new List<Board>();
             List<double> Vals = new List<double>();
-            NeuralNet notMe = GoDiePointers.DeepClone(this);
-            notMe.Player.IsW = !isW;
             Dictionary<Board, double> moves = new Dictionary<Board, double>();
 
             List<Board> starterBoards = new List<Board>();
-            Dictionary<Board, double> starterMoves = refineMoves(Moves(b, isW), foresight);
-            moves = GoDiePointers.DeepClone(starterMoves);
-
-            foreach (KeyValuePair<Board, double> kvp in moves)
+            List<double> starterValues = new List<double>();
+            Dictionary<Board, double> starterMoves = refineMoves(Moves(b, isW), foresight, isW);
+            foreach (KeyValuePair<Board, double> kvp in starterMoves)
             {
-                Boards.Add(kvp.Key); Vals.Add(kvp.Value);
-                starterBoards.Add(kvp.Key);
+                starterBoards.Add(kvp.Key); starterValues.Add(kvp.Value);
             }
-
-            for (int i = 0; i < Vals.Count; i++)
+            //For each starting move, find boards derriving from it
+            for (int i = 0; i < starterBoards.Count; i++)
             {
-                for (int ii = 0; ii < Vals.Count; ii++)
+                Boards = new List<Board>(); Vals = new List<double>();
+                foreach (KeyValuePair<Board, double> kvp in moves)
                 {
-                    try
-                    {
-                        if (Boards[ii].WTurn == Player.IsW) { moves = refineMoves(Moves(Boards[ii], isW), foresight); }
-                        else { moves = refineMoves(notMe.Moves(Boards[ii], notMe.Player.IsW), foresight); }
-                    }
-                    catch (ArgumentOutOfRangeException argsEx) { Console.WriteLine(argsEx); }
-                    Vals[ii] = -9999;
-                    foreach (KeyValuePair<Board, double> kvp in moves)
-                    {
-                        if (Vals[ii] <= kvp.Value) { Vals[ii] = kvp.Value; Boards[ii] = kvp.Key; }
-                        else { kvp.Key.Dispose(); }
-                    }
+                    Boards.Add(kvp.Key); Vals.Add(kvp.Value);
                 }
-            }
+                //Go into depth to find moves
+                //moves.Count == foresight, or it should be
+                foreach (KeyValuePair<Board, double> sMove in starterMoves)
+                {
+                    for (int ii = 0; ii < moves.Count; ii++)
+                    {
+                        //WILL break it later (probably) [a test] (or not, since it continues?)
+                        //Sees if it's in check
+                        sMove.Key.Checks(isW);
+                        if (sMove.Key.amICheck(isW)) { sMove.Key.Dispose(); continue; }
 
-            for (int i = 0; i < Vals.Count; i++)
-            {
-                if (Vals[i] > Vals[0]) { Vals[0] = Vals[i]; Boards[i] = starterBoards[i]; }
-                else { Boards[i].Dispose(); }
+                        moves = refineMoves(Moves(sMove.Key, isW), foresight, isW);
+                        try
+                        {
+                            if (Boards[ii].WTurn == isW) { moves = refineMoves(Moves(Boards[ii], isW), foresight, isW); }
+                            else { moves = refineMoves(Moves(Boards[ii], !isW), foresight, !isW); }
+                        }
+                        catch (ArgumentOutOfRangeException argsEx) { Console.WriteLine(argsEx); }
+
+                        foreach (KeyValuePair<Board, double> kvp in moves)
+                        {
+                            kvp.Key.Checks(isW);
+                            if (kvp.Key.amICheck(isW)) { kvp.Key.Dispose(); continue; }
+                            //Otherwise, if it has a higher score, assign it to the starter board                           
+
+                            if (!starterBoards[i].amICheck(isW) && starterValues[i] <= kvp.Value) { starterValues[i] = kvp.Value; Boards[i] = kvp.Key; }
+                            else { kvp.Key.Dispose(); }
+                        }
+                    }
+                }              
             }
-            notMe.Dispose(); return starterBoards[0]; 
+            for (int i = 0; i < starterValues.Count; i++)
+            {
+                starterBoards[i].Checks(isW);
+                if (starterBoards[i].amICheck(isW)) { continue; }
+                if (starterValues[i] > starterValues[0]) { starterValues[0] = starterValues[i]; }
+                else { starterBoards[i].Dispose(); }
+            }
+            return starterBoards[0]; 
+            //Need to add stalemate
         }
-        public Dictionary<Board, double> refineMoves(Dictionary<Board, double> Moves, int Depth)
+        public Dictionary<Board, double> refineMoves(Dictionary<Board, double> Moves, int Depth, bool isW)
         {
             Dictionary<Board, double> kvps = new Dictionary<Board, double>();
             List<Board> boards = new List<Board>();
             List<double> values = new List<double>();
             foreach (KeyValuePair<Board, double> Move in Moves)
             {
-                if (values.Count() <= Depth) { values.Add(Move.Value); boards.Add(Move.Key); }
+                Move.Key.Checks(isW);
+                if (Move.Key.amICheck(isW)) { Move.Key.Dispose(); break; }
+                if (values.Count() < Depth) { values.Add(Move.Value); boards.Add(Move.Key); }
                 else
-                {
+                {               
                     for (int i = 0; i < values.Count() - 1; i++)
-                    {
+                    {    
                         if (Move.Value > values[i]) { values[i] = Move.Value; boards[i] = Move.Key; }
                         else { Move.Key.Dispose(); }
                     }
@@ -300,6 +325,10 @@ namespace ChessNN
 
             for (int i = 0; i < boards.Count(); i++)
             {
+                //If you lose, don't do it
+                if (isW) { if (boards[i].WCheck) { continue; } }
+                else { if (boards[i].BCheck) { continue; } }
+
                 if (!kvps.ContainsKey(boards[i]))
                 { kvps.Add(boards[i], values[i]); }
             }
@@ -317,7 +346,7 @@ namespace ChessNN
                 {
                     Piece piece = b.Pieces[j, jj];
                     if (piece is Empty) { continue; }
-                    else { if (piece.Player.IsW != isW) { continue; } }
+                    if (piece.Player.IsW != isW) { continue; }
                     int iFactor;
                     if (isW) { iFactor = -1; }
                     else { iFactor = 1; }
@@ -364,7 +393,7 @@ namespace ChessNN
                                 Board trialBoard = GoDiePointers.DeepClone(b);
                                 try { trialBoard = ((Knight)trialBoard.Pieces[j, jj]).Move(trialBoard, j + dfx, jj + dfy); }
                                 catch { invalid = true; trialBoard.Dispose(); }
-                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                                if (trialBoard.Pieces != b.Pieces && !invalid) {  Moves.Add(trialBoard, Score(trialBoard, isW)); }
                             }
                         }
                         continue;
@@ -377,13 +406,13 @@ namespace ChessNN
                             Board trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Bishop)trialBoard.Pieces[j, jj]).Move(trialBoard, j + df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) {  Moves.Add(trialBoard, Score(trialBoard, isW)); }
 
                             invalid = false;
                             trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Bishop)trialBoard.Pieces[j, jj]).Move(trialBoard, j - df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) {  Moves.Add(trialBoard, Score(trialBoard, isW)); }
                         }
                         continue;
                     }
@@ -396,7 +425,7 @@ namespace ChessNN
                             Board trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Queen)trialBoard.Pieces[j, jj]).Move(trialBoard, j + df, jj); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (!trialBoard.amICheck(isW) && trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
 
                             invalid = false;
                             trialBoard = GoDiePointers.DeepClone(b);

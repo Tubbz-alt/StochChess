@@ -22,7 +22,7 @@ namespace ChessNN
         public Neuron Output { get; set; }
         public int depth { get; set; }
         public int count { get; set; }
-        public int foresight = 4;
+        public int foresight = 2;
         public void initNN()
         {
             try
@@ -244,6 +244,53 @@ namespace ChessNN
             }
 
             List<Board> Boards = new List<Board>();
+            Boards.Add(b);
+            List<double> Values = new List<double>();
+            Values.Add(-999999999);
+            //Create the boards
+            for (int i = 1; i < foresight; i++)
+            {
+                //Currently only looking down best path for each board
+                bool ISW;
+                if (i % 2 != 0) { ISW = GoDiePointers.DeepClone(isW); }
+                else { ISW = !GoDiePointers.DeepClone(isW); }
+                Dictionary<Board, double> temps = refineMoves(Moves(Boards[i - 1], ISW), foresight, ISW);
+                
+                //Refine the boards
+                foreach (KeyValuePair<Board, double> kvp in temps)
+                {
+                    if (i == 1) { Values.Add(kvp.Value); Boards.Add(kvp.Key); }
+                    if (Values[i] < kvp.Value) { Values[i] = kvp.Value; Boards[i] = kvp.Key; }
+                    else { kvp.Key.Dispose(); }
+                }
+            }
+
+            //Choose a board
+            for (int i = 0; i < Boards.Count; i++)
+            {
+                if (Values[i] > Values[0]) { Boards[0] = Boards[i]; Values[0] = Values[i]; }
+                else { Boards[i].Dispose(); }
+            }
+            b = Boards[0];
+            return b;
+        }
+
+        //Old
+        /*
+        public Board Move(Board b, bool isW)
+        {
+            bool hasKing = false;
+            foreach (Piece piece in b.Pieces)
+            {
+                if (piece is King && piece.Player.IsW == isW) { hasKing = true; break; }
+            }
+            if (!hasKing)
+            {
+                if (b.WTurn == true) { b.BWin = true; Console.WriteLine("Black victory!"); return b; }
+                if (b.WTurn == false) { b.WWin = true; Console.WriteLine("White victory!"); return b; }
+            }
+
+            List<Board> Boards = new List<Board>();
             List<double> Vals = new List<double>();
             Dictionary<Board, double> moves = new Dictionary<Board, double>();
 
@@ -303,6 +350,7 @@ namespace ChessNN
             return starterBoards[0]; 
             //Need to add stalemate
         }
+        */
         public Dictionary<Board, double> refineMoves(Dictionary<Board, double> Moves, int Depth, bool isW)
         {
             Dictionary<Board, double> kvps = new Dictionary<Board, double>();

@@ -131,7 +131,7 @@ namespace ChessNN
             BestNeurons = GoDiePointers.DeepClone(NNW.Neurons);
 
             Random random = new Random();
-           
+
             //Amount of weights to change
             int changeCount = 5;
             for (int j = 0; j < changeCount; j++)
@@ -194,7 +194,7 @@ namespace ChessNN
                 }
                 catch (Exception ex) { Console.WriteLine(ex); return; }
             }
-            
+
             //At movecap, end playing, and write whoever had a higher score to the weight list file
             int moveCap = 75;
             int i = 1;
@@ -230,6 +230,7 @@ namespace ChessNN
             b.Pieces = Board.initBoard(b);
             Play(b);
         }
+        
         public Board Move(Board b, bool isW)
         {
             bool hasKing = false;
@@ -255,7 +256,7 @@ namespace ChessNN
                 if (i % 2 != 0) { ISW = GoDiePointers.DeepClone(isW); }
                 else { ISW = !GoDiePointers.DeepClone(isW); }
                 Dictionary<Board, double> temps = refineMoves(Moves(Boards[i - 1], ISW), foresight, ISW);
-                
+
                 //Refine the boards
                 foreach (KeyValuePair<Board, double> kvp in temps)
                 {
@@ -362,9 +363,9 @@ namespace ChessNN
                 if (Move.Key.amICheck(isW)) { Move.Key.Dispose(); break; }
                 if (values.Count() < Depth) { values.Add(Move.Value); boards.Add(Move.Key); }
                 else
-                {               
+                {
                     for (int i = 0; i < values.Count() - 1; i++)
-                    {    
+                    {
                         if (Move.Value > values[i]) { values[i] = Move.Value; boards[i] = Move.Key; }
                         else { Move.Key.Dispose(); }
                     }
@@ -441,7 +442,7 @@ namespace ChessNN
                                 Board trialBoard = GoDiePointers.DeepClone(b);
                                 try { trialBoard = ((Knight)trialBoard.Pieces[j, jj]).Move(trialBoard, j + dfx, jj + dfy); }
                                 catch { invalid = true; trialBoard.Dispose(); }
-                                if (trialBoard.Pieces != b.Pieces && !invalid) {  Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
                             }
                         }
                         continue;
@@ -454,13 +455,13 @@ namespace ChessNN
                             Board trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Bishop)trialBoard.Pieces[j, jj]).Move(trialBoard, j + df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) {  Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
 
                             invalid = false;
                             trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Bishop)trialBoard.Pieces[j, jj]).Move(trialBoard, j - df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) {  Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
                         }
                         continue;
                     }

@@ -253,7 +253,7 @@ namespace ChessNN
                 Dictionary<Board, double> temps;
                 //Currently only looking down best path for each board
                 if (i % 2 != 0) { temps = refineMoves(Moves(Boards[i - 1], isW), foresight, isW); }
-                else { temps = notMe.refineMoves(Moves(Boards[i - 1], !isW), foresight, !isW); }
+                else { temps = notMe.refineMoves(Moves(Boards[i - 1], !isW), foresight, isW); }
 
                 //Refine the boards
                 foreach (KeyValuePair<Board, double> kvp in temps)
@@ -320,8 +320,7 @@ namespace ChessNN
         {
             Dictionary<Board, double> Moves = new Dictionary<Board, double>();
             if (b.WTurn != isW) { Console.WriteLine("Not my turn"); return Moves; }
-            Board bestBoard = GoDiePointers.DeepClone(b);
-            bool invalid = false;
+            bool invalid;
             for (int j = 0; j <= 7; j++)
             {
                 for (int jj = 0; jj <= 7; jj++)
@@ -333,7 +332,10 @@ namespace ChessNN
                     if (isW) { iFactor = -1; }
                     else { iFactor = 1; }
                     if (piece is Pawn)
-                    {   //x
+                    {
+                        //Because it is my turn anyway, I can set my remaining pawns' enpass to false (so long as they don't do it this turn)
+                        ((Pawn)piece).enPass = false;
+                        //x
                         for (int i = 1 * iFactor; Math.Abs(i) <= Math.Abs(2 * iFactor); i = i + iFactor)
                         {   //y
                             for (int ii = -1; ii <= 1; ii++)

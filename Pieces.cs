@@ -33,7 +33,7 @@ namespace ChessNN
     [Serializable]
     public class Pawn : Piece
     {
-        bool enPass, twoStep;
+        public bool enPass, twoStep;
         public Pawn(Player player, int posX, int posY)
         {
             Name = "Pawn"; PosX = posX; PosY = posY; Player = player; twoStep = true; enPass = false;

@@ -102,8 +102,6 @@ namespace ChessNN
                 if (p.Player.IsW != isW) { p.CVal = -Math.Abs(p.CVal); }
                 else { p.CVal = Math.Abs(p.CVal); }
             }
-            //If you don't have a king, then your score is awful!
-            if (board.Checks(isW)) { return -99999; }
 
             foreach (Neuron n in Neurons)
             {

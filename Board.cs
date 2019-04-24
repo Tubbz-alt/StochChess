@@ -12,6 +12,7 @@ namespace ChessNN
         public bool WTurn = true;
         public bool WWin = false;
         public bool BWin = false;
+        public bool Stale = false;
         public bool WCheck = false;
         public bool BCheck = false;
         public Board(Player p1, Player p2, Piece[,] pieces, bool wturn)
@@ -75,9 +76,7 @@ namespace ChessNN
             return false;
         }
 
-        /// <summary>
-        /// [OLD] Update the check values for each king
-        /// </summary>
+
         /*
         public void Checks()
         {
@@ -93,7 +92,9 @@ namespace ChessNN
         }
         */
 
-        //Check if king is in check
+        /// <summary>
+        /// Check if king is in check
+        /// </summary>
         public bool Checks(bool isW)
         {
             WCheck = false; BCheck = false;
@@ -104,7 +105,7 @@ namespace ChessNN
                     bool? oleft = null; bool? oright = null; bool? oup = null; bool? odown = null;
                     bool? dleft = null; bool? dright = null; bool? dup = null; bool? ddown = null;
 
-                    for (int i = 0; i <= 7; i++)
+                    for (int i = 1; i <= 7; i++)
                     {
                         //oleft
                         if (oleft is null)
@@ -118,8 +119,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a rook/queen, then you're in check
                                     if (Pieces[p.PosX - i, p.PosY].Player.IsW != isW
-                                        || Pieces[p.PosX - i, p.PosY] is Rook
-                                        || Pieces[p.PosX - i, p.PosY] is Queen)
+                                        && (Pieces[p.PosX - i, p.PosY] is Rook
+                                        || Pieces[p.PosX - i, p.PosY] is Queen))
                                     { oleft = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -142,8 +143,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a rook/queen, then you're in check
                                     if (Pieces[p.PosX + i, p.PosY].Player.IsW != isW
-                                        || Pieces[p.PosX + i, p.PosY] is Rook
-                                        || Pieces[p.PosX + i, p.PosY] is Queen)
+                                        && (Pieces[p.PosX + i, p.PosY] is Rook
+                                        || Pieces[p.PosX + i, p.PosY] is Queen))
                                     { oright = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -166,8 +167,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a rook/queen, then you're in check
                                     if (Pieces[p.PosX, p.PosY - i].Player.IsW != isW
-                                        || Pieces[p.PosX, p.PosY - i] is Rook
-                                        || Pieces[p.PosX, p.PosY - i] is Queen)
+                                        && (Pieces[p.PosX, p.PosY - i] is Rook
+                                        || Pieces[p.PosX, p.PosY - i] is Queen))
                                     { oup = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -190,8 +191,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a rook/queen, then you're in check
                                     if (Pieces[p.PosX, p.PosY + i].Player.IsW != isW
-                                        || Pieces[p.PosX, p.PosY + i] is Rook
-                                        || Pieces[p.PosX, p.PosY + i] is Queen)
+                                        && (Pieces[p.PosX, p.PosY + i] is Rook
+                                        || Pieces[p.PosX, p.PosY + i] is Queen))
                                     { odown = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -215,8 +216,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a bishop/queen, then you're in check
                                     if (Pieces[p.PosX + i, p.PosY + i].Player.IsW != isW
-                                        || Pieces[p.PosX + i, p.PosY + i] is Bishop
-                                        || Pieces[p.PosX + i, p.PosY + i] is Queen)
+                                        && (Pieces[p.PosX + i, p.PosY + i] is Bishop
+                                        || Pieces[p.PosX + i, p.PosY + i] is Queen))
                                     { dleft = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -239,8 +240,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a rook/queen, then you're in check
                                     if (Pieces[p.PosX - i, p.PosY - i].Player.IsW != isW
-                                        || Pieces[p.PosX - i, p.PosY - i] is Bishop
-                                        || Pieces[p.PosX - i, p.PosY - i] is Queen)
+                                        && (Pieces[p.PosX - i, p.PosY - i] is Bishop
+                                        || Pieces[p.PosX - i, p.PosY - i] is Queen))
                                     { dright = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -263,8 +264,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a rook/queen, then you're in check
                                     if (Pieces[p.PosX + i, p.PosY - i].Player.IsW != isW
-                                        || Pieces[p.PosX + i, p.PosY - i] is Bishop
-                                        || Pieces[p.PosX + i, p.PosY - i] is Queen)
+                                        && (Pieces[p.PosX + i, p.PosY - i] is Bishop
+                                        || Pieces[p.PosX + i, p.PosY - i] is Queen))
                                     { dup = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -287,8 +288,8 @@ namespace ChessNN
                                 {
                                     //If it's hostile and a rook/queen, then you're in check
                                     if (Pieces[p.PosX - i, p.PosY + i].Player.IsW != isW
-                                        || Pieces[p.PosX - i, p.PosY + i] is Bishop
-                                        || Pieces[p.PosX - i, p.PosY + i] is Queen)
+                                        && (Pieces[p.PosX - i, p.PosY + i] is Bishop
+                                        || Pieces[p.PosX - i, p.PosY + i] is Queen))
                                     { ddown = true; }
                                     //Otherwise, you're not in check
                                     else
@@ -301,45 +302,76 @@ namespace ChessNN
                         }
                     }
 
-                    bool? king = null;
+                    bool? kingpawn = null;
                     for (int i = -1; i <= 1; i++)
                     {
-                        if (king != true)
+                        if (kingpawn != true)
                         {
-                            try
+                            if (i != 0)
                             {
-                                if (Pieces[p.PosX + i, p.PosY + i] is King) { king = true; }
-                                else { king = false; }
-                            }
-                            catch { king = false; }
+                                try
+                                {
+                                    if (Pieces[p.PosX + i, p.PosY + i] is King || (Pieces[p.PosX + i, p.PosY + i] is Pawn && Pieces[p.PosX + i, p.PosY + i].Player.IsW != isW)) { kingpawn = true; }
+                                    else { if (kingpawn != true) { kingpawn = false; } }
+                                }
+                                catch { if (kingpawn != true) { kingpawn = false; } }
+                                try
+                                {
+                                    if (Pieces[p.PosX - i, p.PosY + i] is King || (Pieces[p.PosX - i, p.PosY + i] is Pawn && Pieces[p.PosX - i, p.PosY + i].Player.IsW != isW)) { kingpawn = true; }
+                                    else { if (kingpawn != true) { kingpawn = false; } }
+                                }
+                                catch { if (kingpawn != true) { kingpawn = false; } }
+                                try
+                                {
+                                    if (Pieces[p.PosX, p.PosY + i] is King) { kingpawn = true; }
+                                    else { if (kingpawn != true) { kingpawn = false; } }
+                                }
+                                catch { if (kingpawn != true) { kingpawn = false; } }
+                                try
+                                {
+                                    if (Pieces[p.PosX + i, p.PosY] is King) { kingpawn = true; }
+                                    else { if (kingpawn != true) { kingpawn = false; } }
+                                }
+                                catch { if (kingpawn != true) { kingpawn = false; } }
 
-                            try
-                            {
-                                if (Pieces[p.PosX - i, p.PosY + i] is King) { king = true; }
-                                else { king = false; }
                             }
-                            catch { king = false; }
                         }
-                    }
 
-                    bool? knight = null;
-                    //May break on sides of board?
-                    //SUPER VERBOSE
-                    if (knight != true && Pieces[p.PosX + 1, p.PosY + 2] is Knight) { knight = true; }
-                    else { knight = false; }
-                    if (knight != true && Pieces[p.PosX - 1, p.PosY - 2] is Knight) { knight = true; }
-                    else { knight = false; }
-                    if (knight != true && Pieces[p.PosX + 1, p.PosY - 2] is Knight) { knight = true; }
-                    else { knight = false; }
-                    if (knight != true && Pieces[p.PosX - 1, p.PosY + 2] is Knight) { knight = true; }
-                    else { knight = false; }
+                        bool? knight = null;
+                        //May break on sides of board?
+                        //SUPER VERBOSE
+                        try
+                        {
+                            if (Pieces[p.PosX + 1, p.PosY + 2] is Knight) { knight = true; }
+                            else { if (knight != true) { knight = false; } }
+                        }
+                        catch { if (knight != true) { knight = false; } }
+                        try
+                        {
+                            if (Pieces[p.PosX - 1, p.PosY - 2] is Knight) { knight = true; }
+                            else { if (knight != true) { knight = false; } }
+                        }
+                        catch { if (knight != true) { knight = false; } }
+                        try
+                        {
+                            if (Pieces[p.PosX + 1, p.PosY - 2] is Knight) { knight = true; }
+                            else { if (knight != true) { knight = false; } }
+                        }
+                        catch { if (knight != true) { knight = false; } }
+                        try
+                        {
+                            if (Pieces[p.PosX - 1, p.PosY + 2] is Knight) { knight = true; }
+                            else { if (knight != true) { knight = false; } }
+                        }
+                        catch { if (knight != true) { knight = false; } }
 
-                    if (oright == true || oleft == true || oup == true || odown == true
-                        || dright == true || dleft == true || dup == true || ddown == true
-                        || knight == true || king == true)
-                    {
-                        if (isW) { WCheck = true; }
-                        else { BCheck = true; }
+                        if (oright == true || oleft == true || oup == true || odown == true
+                            || dright == true || dleft == true || dup == true || ddown == true
+                            || knight == true || kingpawn == true)
+                        {
+                            if (isW) { WCheck = true; }
+                            else { BCheck = true; }
+                        }
                     }
                 }
             }

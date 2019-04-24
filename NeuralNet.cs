@@ -22,6 +22,7 @@ namespace ChessNN
         public Neuron Output { get; set; }
         public int depth { get; set; }
         public int count { get; set; }
+        //Should be even
         public int foresight = 2;
         public void initNN()
         {
@@ -102,8 +103,7 @@ namespace ChessNN
                 else { p.CVal = Math.Abs(p.CVal); }
             }
             //If you don't have a king, then your score is awful!
-            board.Checks(isW);
-            if (board.amICheck(isW)) { return -99999; }
+            if (board.Checks(isW)) { return -99999; }
 
             foreach (Neuron n in Neurons)
             {
@@ -127,8 +127,7 @@ namespace ChessNN
                 if (p.Player.IsW == true) { p.Player = PW; }
                 else { p.Player = PB; }
             }
-            List<Neuron> BestNeurons = new List<Neuron>();
-            BestNeurons = GoDiePointers.DeepClone(NNW.Neurons);
+            List<Neuron> BestNeurons = GoDiePointers.DeepClone(NNW.Neurons);
 
             Random random = new Random();
 
@@ -176,10 +175,8 @@ namespace ChessNN
                         }
                     }
                     /*
-
                      * Disabled for now 
                      * also, it has a 50% chance of selecting the empty squares with the current x/y randomizer
-
                     //Changing class values?
                     if (randthing == 3)
                     {
@@ -196,13 +193,13 @@ namespace ChessNN
             }
 
             //At movecap, end playing, and write whoever had a higher score to the weight list file
-            int moveCap = 75;
+            int moveCap = 101;
             int i = 1;
             //While it has not moved too many times, and while no-one has won, play
             //Run in parallel?
 
             //Why use two boards..?
-            while (i <= moveCap && !b.WWin && !b.BWin && !b2.WWin && !b2.BWin)
+            while (i <= moveCap && !b.WWin && !b.BWin && !b2.WWin && !b2.BWin && !b.Stale && !b2.Stale)
             {
                 if (b.WTurn) { b2.Pieces = NNW.Move(b, NNW.Player.IsW).Pieces; Board.PrintBoard(b2); b2.WTurn = GoDiePointers.DeepClone(!b.WTurn); i++; }
                 if (!b2.WTurn) { b.Pieces = NNB.Move(b2, NNB.Player.IsW).Pieces; Board.PrintBoard(b); b.WTurn = GoDiePointers.DeepClone(!b2.WTurn); i++; }
@@ -230,7 +227,7 @@ namespace ChessNN
             b.Pieces = Board.initBoard(b);
             Play(b);
         }
-        
+
         public Board Move(Board b, bool isW)
         {
             bool hasKing = false;
@@ -244,6 +241,10 @@ namespace ChessNN
                 if (b.WTurn == false) { b.WWin = true; Console.WriteLine("White victory!"); return b; }
             }
 
+            NeuralNet notMe = GoDiePointers.DeepClone(this);
+            notMe.Player.IsW = !isW;
+            Data.ReadNs(notMe);
+
             List<Board> Boards = new List<Board>();
             Boards.Add(b);
             List<double> Values = new List<double>();
@@ -251,11 +252,10 @@ namespace ChessNN
             //Create the boards
             for (int i = 1; i < foresight; i++)
             {
+                Dictionary<Board, double> temps;
                 //Currently only looking down best path for each board
-                bool ISW;
-                if (i % 2 != 0) { ISW = GoDiePointers.DeepClone(isW); }
-                else { ISW = !GoDiePointers.DeepClone(isW); }
-                Dictionary<Board, double> temps = refineMoves(Moves(Boards[i - 1], ISW), foresight, ISW);
+                if (i % 2 != 0) { temps = refineMoves(Moves(Boards[i - 1], isW), foresight, isW); }
+                else { temps = notMe.refineMoves(Moves(Boards[i - 1], !isW), foresight, !isW); }
 
                 //Refine the boards
                 foreach (KeyValuePair<Board, double> kvp in temps)
@@ -266,6 +266,12 @@ namespace ChessNN
                 }
             }
 
+            //If there are no non-check moves, indlude kys as an option
+            if (Boards.Count <= 1) {
+                if (b.amICheck(isW)) { Console.WriteLine("I'm in mate"); if (isW) { b.BWin = true; } else { b.WWin = true; } }
+                else { Console.WriteLine("Stalemate"); b.Stale = true; return b; }
+            }
+
             //Choose a board
             for (int i = 0; i < Boards.Count; i++)
             {
@@ -273,85 +279,10 @@ namespace ChessNN
                 else { Boards[i].Dispose(); }
             }
             b = Boards[0];
+            if (b.amICheck(isW)) { Console.WriteLine("I'm in check"); }
             return b;
         }
-
-        //Old
-        /*
-        public Board Move(Board b, bool isW)
-        {
-            bool hasKing = false;
-            foreach (Piece piece in b.Pieces)
-            {
-                if (piece is King && piece.Player.IsW == isW) { hasKing = true; break; }
-            }
-            if (!hasKing)
-            {
-                if (b.WTurn == true) { b.BWin = true; Console.WriteLine("Black victory!"); return b; }
-                if (b.WTurn == false) { b.WWin = true; Console.WriteLine("White victory!"); return b; }
-            }
-
-            List<Board> Boards = new List<Board>();
-            List<double> Vals = new List<double>();
-            Dictionary<Board, double> moves = new Dictionary<Board, double>();
-
-            List<Board> starterBoards = new List<Board>();
-            List<double> starterValues = new List<double>();
-            Dictionary<Board, double> starterMoves = refineMoves(Moves(b, isW), foresight, isW);
-            foreach (KeyValuePair<Board, double> kvp in starterMoves)
-            {
-                starterBoards.Add(kvp.Key); starterValues.Add(kvp.Value);
-            }
-            //For each starting move, find boards derriving from it
-            for (int i = 0; i < starterBoards.Count; i++)
-            {
-                Boards = new List<Board>(); Vals = new List<double>();
-                foreach (KeyValuePair<Board, double> kvp in moves)
-                {
-                    Boards.Add(kvp.Key); Vals.Add(kvp.Value);
-                }
-                //Go into depth to find moves
-                //moves.Count == foresight, or it should be
-                foreach (KeyValuePair<Board, double> sMove in starterMoves)
-                {
-                    for (int ii = 0; ii < moves.Count; ii++)
-                    {
-                        //WILL break it later (probably) [a test] (or not, since it continues?)
-                        //Sees if it's in check
-                        sMove.Key.Checks(isW);
-                        if (sMove.Key.amICheck(isW)) { sMove.Key.Dispose(); continue; }
-
-                        moves = refineMoves(Moves(sMove.Key, isW), foresight, isW);
-                        try
-                        {
-                            if (Boards[ii].WTurn == isW) { moves = refineMoves(Moves(Boards[ii], isW), foresight, isW); }
-                            else { moves = refineMoves(Moves(Boards[ii], !isW), foresight, !isW); }
-                        }
-                        catch (ArgumentOutOfRangeException argsEx) { Console.WriteLine(argsEx); }
-
-                        foreach (KeyValuePair<Board, double> kvp in moves)
-                        {
-                            kvp.Key.Checks(isW);
-                            if (kvp.Key.amICheck(isW)) { kvp.Key.Dispose(); continue; }
-                            //Otherwise, if it has a higher score, assign it to the starter board                           
-
-                            if (!starterBoards[i].amICheck(isW) && starterValues[i] <= kvp.Value) { starterValues[i] = kvp.Value; Boards[i] = kvp.Key; }
-                            else { kvp.Key.Dispose(); }
-                        }
-                    }
-                }              
-            }
-            for (int i = 0; i < starterValues.Count; i++)
-            {
-                starterBoards[i].Checks(isW);
-                if (starterBoards[i].amICheck(isW)) { continue; }
-                if (starterValues[i] > starterValues[0]) { starterValues[0] = starterValues[i]; }
-                else { starterBoards[i].Dispose(); }
-            }
-            return starterBoards[0]; 
-            //Need to add stalemate
-        }
-        */
+      
         public Dictionary<Board, double> refineMoves(Dictionary<Board, double> Moves, int Depth, bool isW)
         {
             Dictionary<Board, double> kvps = new Dictionary<Board, double>();
@@ -359,17 +290,21 @@ namespace ChessNN
             List<double> values = new List<double>();
             foreach (KeyValuePair<Board, double> Move in Moves)
             {
-                Move.Key.Checks(isW);
-                if (Move.Key.amICheck(isW)) { Move.Key.Dispose(); break; }
-                if (values.Count() < Depth) { values.Add(Move.Value); boards.Add(Move.Key); }
-                else
+                //If not in check, sort it through
+                if (!Move.Key.Checks(isW))
                 {
-                    for (int i = 0; i < values.Count() - 1; i++)
+                    if (Move.Key.amICheck(isW)) { Move.Key.Dispose(); break; }
+                    if (values.Count() < Depth) { values.Add(Move.Value); boards.Add(Move.Key); }
+                    else
                     {
-                        if (Move.Value > values[i]) { values[i] = Move.Value; boards[i] = Move.Key; }
-                        else { Move.Key.Dispose(); }
+                        for (int i = 0; i < values.Count() - 1; i++)
+                        {
+                            if (Move.Value > values[i]) { values[i] = Move.Value; boards[i] = Move.Key; }
+                            else { Move.Key.Dispose(); }
+                        }
                     }
                 }
+                else { Move.Key.Dispose(); }
             }
 
             for (int i = 0; i < boards.Count(); i++)

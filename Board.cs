@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace ChessNN
@@ -224,6 +224,8 @@ namespace ChessNN
                     }
                 }
             }
+            if (WCheck) { Console.WriteLine("White is in check"); }
+            if (BCheck) { Console.WriteLine("Black is in check"); }
         }
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls
@@ -261,3 +263,4 @@ namespace ChessNN
         #endregion
     }
 }
+

@@ -62,7 +62,7 @@ namespace ChessNN
             };
             return tempPieces;
         }
-        
+
         /// <summary>
         /// Checks if one is in check
         /// </summary>
@@ -93,10 +93,264 @@ namespace ChessNN
         }
         */
 
+        //Check if king is in check
+        public bool Checks(bool isW)
+        {
+            WCheck = false; BCheck = false;
+            foreach (Piece p in Pieces)
+            {
+                if (p is King && p.Player.IsW == isW)
+                {
+                    bool? oleft = null; bool? oright = null; bool? oup = null; bool? odown = null;
+                    bool? dleft = null; bool? dright = null; bool? dup = null; bool? ddown = null;
+
+                    for (int i = 0; i <= 7; i++)
+                    {
+                        //oleft
+                        if (oleft is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX - i, p.PosY] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a rook/queen, then you're in check
+                                    if (Pieces[p.PosX - i, p.PosY].Player.IsW != isW
+                                        || Pieces[p.PosX - i, p.PosY] is Rook
+                                        || Pieces[p.PosX - i, p.PosY] is Queen)
+                                    { oleft = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        oleft = false;
+                                    }
+                                }
+                            }
+                            catch { oleft = false; }
+                        }
+                        //oright
+                        if (oright is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX + i, p.PosY] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a rook/queen, then you're in check
+                                    if (Pieces[p.PosX + i, p.PosY].Player.IsW != isW
+                                        || Pieces[p.PosX + i, p.PosY] is Rook
+                                        || Pieces[p.PosX + i, p.PosY] is Queen)
+                                    { oright = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        oright = false;
+                                    }
+                                }
+                            }
+                            catch { oright = false; }
+                        }
+                        //oup
+                        if (oup is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX, p.PosY - i] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a rook/queen, then you're in check
+                                    if (Pieces[p.PosX, p.PosY - i].Player.IsW != isW
+                                        || Pieces[p.PosX, p.PosY - i] is Rook
+                                        || Pieces[p.PosX, p.PosY - i] is Queen)
+                                    { oup = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        oup = false;
+                                    }
+                                }
+                            }
+                            catch { oup = false; }
+                        }
+                        //odown
+                        if (odown is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX, p.PosY + i] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a rook/queen, then you're in check
+                                    if (Pieces[p.PosX, p.PosY + i].Player.IsW != isW
+                                        || Pieces[p.PosX, p.PosY + i] is Rook
+                                        || Pieces[p.PosX, p.PosY + i] is Queen)
+                                    { odown = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        odown = false;
+                                    }
+                                }
+                            }
+                            catch { odown = false; }
+                        }
+
+                        //dleft
+                        if (dleft is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX + i, p.PosY + i] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a bishop/queen, then you're in check
+                                    if (Pieces[p.PosX + i, p.PosY + i].Player.IsW != isW
+                                        || Pieces[p.PosX + i, p.PosY + i] is Bishop
+                                        || Pieces[p.PosX + i, p.PosY + i] is Queen)
+                                    { dleft = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        dleft = false;
+                                    }
+                                }
+                            }
+                            catch { dleft = false; }
+                        }
+                        //dright
+                        if (dright is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX - i, p.PosY - i] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a rook/queen, then you're in check
+                                    if (Pieces[p.PosX - i, p.PosY - i].Player.IsW != isW
+                                        || Pieces[p.PosX - i, p.PosY - i] is Bishop
+                                        || Pieces[p.PosX - i, p.PosY - i] is Queen)
+                                    { dright = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        dright = false;
+                                    }
+                                }
+                            }
+                            catch { dright = false; }
+                        }
+                        //dup
+                        if (dup is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX + i, p.PosY - i] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a rook/queen, then you're in check
+                                    if (Pieces[p.PosX + i, p.PosY - i].Player.IsW != isW
+                                        || Pieces[p.PosX + i, p.PosY - i] is Bishop
+                                        || Pieces[p.PosX + i, p.PosY - i] is Queen)
+                                    { dup = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        dup = false;
+                                    }
+                                }
+                            }
+                            catch { dup = false; }
+                        }
+                        //ddown
+                        if (ddown is null)
+                        {
+                            try
+                            {
+                                //if empty, pass
+                                if ((Pieces[p.PosX - i, p.PosY + i] is Empty)) { }
+                                //Otherwise, find out what it is
+                                else
+                                {
+                                    //If it's hostile and a rook/queen, then you're in check
+                                    if (Pieces[p.PosX - i, p.PosY + i].Player.IsW != isW
+                                        || Pieces[p.PosX - i, p.PosY + i] is Bishop
+                                        || Pieces[p.PosX - i, p.PosY + i] is Queen)
+                                    { ddown = true; }
+                                    //Otherwise, you're not in check
+                                    else
+                                    {
+                                        ddown = false;
+                                    }
+                                }
+                            }
+                            catch { ddown = false; }
+                        }
+                    }
+
+                    bool? king = null;
+                    for (int i = -1; i <= 1; i++)
+                    {
+                        if (king != true)
+                        {
+                            try
+                            {
+                                if (Pieces[p.PosX + i, p.PosY + i] is King) { king = true; }
+                                else { king = false; }
+                            }
+                            catch { king = false; }
+
+                            try
+                            {
+                                if (Pieces[p.PosX - i, p.PosY + i] is King) { king = true; }
+                                else { king = false; }
+                            }
+                            catch { king = false; }
+                        }
+                    }
+
+                    bool? knight = null;
+                    //May break on sides of board?
+                    //SUPER VERBOSE
+                    if (knight != true && Pieces[p.PosX + 1, p.PosY + 2] is Knight) { knight = true; }
+                    else { knight = false; }
+                    if (knight != true && Pieces[p.PosX - 1, p.PosY - 2] is Knight) { knight = true; }
+                    else { knight = false; }
+                    if (knight != true && Pieces[p.PosX + 1, p.PosY - 2] is Knight) { knight = true; }
+                    else { knight = false; }
+                    if (knight != true && Pieces[p.PosX - 1, p.PosY + 2] is Knight) { knight = true; }
+                    else { knight = false; }
+
+                    if (oright == true || oleft == true || oup == true || odown == true
+                        || dright == true || dleft == true || dup == true || ddown == true
+                        || knight == true || king == true)
+                    {
+                        if (isW) { WCheck = true; }
+                        else { BCheck = true; }
+                    }
+                }
+            }
+            if (isW) { if (WCheck) { return true; } else { return false; } }
+            else { if (BCheck) { return true; } else { return false; } }
+        }
         /// <summary>
+        /// OLD
         /// Check if king is in check
         /// </summary>
-        public void Checks(bool isW)
+        public void checks(bool isW)
         {
             WCheck = false; BCheck = false;
             foreach (Piece p in Pieces)
@@ -263,4 +517,3 @@ namespace ChessNN
         #endregion
     }
 }
-

@@ -1,5 +1,5 @@
 # StochChess
-A chess AI which uses stochastic descent through a GANS architecture.
+A chess AI which uses stochastic descent through GAN architecture.
 Yes, it is a console app; this may or may not change in the future.
 
 This code IS NOT well documented, if people care to read/use it, then I will do so.

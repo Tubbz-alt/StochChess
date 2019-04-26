@@ -10,9 +10,6 @@ namespace ChessNN
     /// A Neural network
     /// 
     /// Weights are set to null in 1 of the layer 0 neurons, and in all of the >layer 0 neurons
-    /// 
-    /// Bugs:
-    ///     Sometimes allows the king to be taken!
     /// </summary>
     [Serializable]
     public class NeuralNet : IDisposable
@@ -22,8 +19,8 @@ namespace ChessNN
         public Neuron Output { get; set; }
         public int depth { get; set; }
         public int count { get; set; }
-        //Should be even
-        public int foresight = 2;
+        //Only works at 2
+        public int foresight = 3;
         public void initNN()
         {
             try
@@ -108,8 +105,9 @@ namespace ChessNN
                 n.computeCVal(values);
                 if (n.layer == 3) { Output = n; }
             }
-            //Make a position more valuable if it puts the opponent into check
-            if (board.amICheck(!isW)) { Output.currentVal += Output.currentVal * .3000; }
+            //Make less valuable if you're in check
+            if (board.amICheck(isW)) { Output.currentVal = -2 * Math.Abs(Output.currentVal); }
+            if (board.Stale) { Output.currentVal = -2 * Math.Abs(Output.currentVal); }
             return Output.currentVal;
         }
         public static void Play(Board b)
@@ -191,16 +189,16 @@ namespace ChessNN
             }
 
             //At movecap, end playing, and write whoever had a higher score to the weight list file
-            int moveCap = 101;
+            int moveCap = 100;
             int i = 1;
             //While it has not moved too many times, and while no-one has won, play
             //Run in parallel?
 
-            //Why use two boards..?
+            //Using two boards to allow for different piece cvals, unless I want to put that into the NN class?
             while (i <= moveCap && !b.WWin && !b.BWin && !b2.WWin && !b2.BWin && !b.Stale && !b2.Stale)
             {
-                if (b.WTurn) { b2.Pieces = NNW.Move(b, NNW.Player.IsW).Pieces; Board.PrintBoard(b2); b2.WTurn = GoDiePointers.DeepClone(!b.WTurn); i++; }
-                if (!b2.WTurn) { b.Pieces = NNB.Move(b2, NNB.Player.IsW).Pieces; Board.PrintBoard(b); b.WTurn = GoDiePointers.DeepClone(!b2.WTurn); i++; }
+                if (b.WTurn) { b2.Pieces = NNW.Move(b, true).Pieces; Board.PrintBoard(b2); b2.WTurn = false; i++; }
+                if (!b2.WTurn) { b.Pieces = NNB.Move(b2, false).Pieces; Board.PrintBoard(b); b.WTurn = true; i++; }
                 else { Console.WriteLine("NN Failure"); break; }
             }
             //Will need to check whether pieces read/write properly in the future
@@ -211,11 +209,36 @@ namespace ChessNN
             if (b.BWin || b2.BWin) { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
             else
             {
-                //If neither won, write the one with a higher (self-percieved) score
-                //May be encouraging a points arms race; it may be wise to sigmoid the scores?
-                if (NNW.Score(b, NNW.Player.IsW) > NNB.Score(b, NNB.Player.IsW))
-                { /*Data.WritePieces(b);*/ Data.WriteNs(NNW); }
-                else { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
+                //Whoever has the most pieces/points wins (over both boards) [not the best, but easier for now, and not horribly prone to error]
+                int wTotal = 0; int bTotal = 0;
+                foreach (Piece p in b.Pieces)
+                {
+                    try
+                    {
+                        if (!(p is Empty) && p.Player.IsW) { wTotal += Math.Abs(p.CVal); } else { bTotal += Math.Abs(p.CVal); }
+                    }
+                    catch (Exception ex) { Console.WriteLine(ex); }
+                }
+                foreach (Piece p in b2.Pieces)
+                {
+                    try
+                    {
+                        if (!(p is Empty) && p.Player.IsW) { wTotal += Math.Abs(p.CVal); } else { bTotal += Math.Abs(p.CVal); }
+                    }
+                    catch (Exception ex) { Console.WriteLine(ex); }
+                }
+                //If white has more points, write its neurons + pieces, vice versa for black
+                if (wTotal > bTotal) {/*Data.WritePieces(b);*/ Data.WriteNs(NNW); }
+                if (bTotal > wTotal) { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
+                //if they tied (incredibly unlikely), then award the one with the larger score
+                if (wTotal == bTotal)
+                {
+                    //If neither won, write the one with a higher (self-percieved) score
+                    //May be encouraging a points arms race; it may be wise to sigmoid the scores?
+                    if (NNW.Score(b, NNW.Player.IsW) > NNB.Score(b, NNB.Player.IsW))
+                    { /*Data.WritePieces(b);*/ Data.WriteNs(NNW); }
+                    else { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
+                }       
             }
 
 
@@ -243,83 +266,148 @@ namespace ChessNN
             notMe.Player.IsW = !isW;
             Data.ReadNs(notMe);
 
-            List<Board> Boards = new List<Board>();
-            Boards.Add(b);
-            List<double> Values = new List<double>();
-            Values.Add(-999999999);
-            //Create the boards
-            for (int i = 1; i < foresight; i++)
+            List<Board> startBoard = new List<Board>();
+            if (isW && b.Checks(isW)) { b.WCheck = true; }
+            if (!isW && b.Checks(isW)) { b.BCheck = true; }
+            startBoard.Add(b);
+            List<double> startVal = new List<double>();
+            startVal.Add(-99999999);
+            //Could be done in a dictionary?
+            List<List<Board>> Boards = new List<List<Board>>();
+            Boards.Add(startBoard);
+            List<List<double>> Values = new List<List<double>>();
+            Values.Add(startVal);
+            //Create the lists
+            for (int i = 0; i < foresight * foresight; i++)
             {
-                Dictionary<Board, double> temps;
-                //Currently only looking down best path for each board
-                if (i % 2 != 0) { temps = refineMoves(Moves(Boards[i - 1], isW), foresight, isW); }
-                else { temps = notMe.refineMoves(Moves(Boards[i - 1], !isW), foresight, isW); }
-
-                //Refine the boards
-                foreach (KeyValuePair<Board, double> kvp in temps)
+                try
                 {
-                    if (i == 1) { Values.Add(kvp.Value); Boards.Add(kvp.Key); }
-                    if (Values[i] < kvp.Value) { Values[i] = kvp.Value; Boards[i] = kvp.Key; }
-                    else { kvp.Key.Dispose(); }
-                }
-            }
-
-            //If there are no non-check moves, indlude kys as an option
-            if (Boards.Count <= 1) {
-                if (b.amICheck(isW)) { Console.WriteLine("I'm in mate"); if (isW) { b.BWin = true; } else { b.WWin = true; } }
-                else { Console.WriteLine("Stalemate"); b.Stale = true; return b; }
-            }
-
-            //Choose a board
-            for (int i = 0; i < Boards.Count; i++)
-            {
-                if (Values[i] > Values[0]) { Boards[0] = Boards[i]; Values[0] = Values[i]; }
-                else { Boards[i].Dispose(); }
-            }
-            b = Boards[0];
-            if (b.amICheck(isW)) { Console.WriteLine("I'm in check"); }
-            return b;
-        }
-      
-        public Dictionary<Board, double> refineMoves(Dictionary<Board, double> Moves, int Depth, bool isW)
-        {
-            Dictionary<Board, double> kvps = new Dictionary<Board, double>();
-            List<Board> boards = new List<Board>();
-            List<double> values = new List<double>();
-            foreach (KeyValuePair<Board, double> Move in Moves)
-            {
-                //If not in check, sort it through
-                if (!Move.Key.Checks(isW))
-                {
-                    if (Move.Key.amICheck(isW)) { Move.Key.Dispose(); break; }
-                    if (values.Count() < Depth) { values.Add(Move.Value); boards.Add(Move.Key); }
-                    else
+                    //create the boards (is exponential)
+                    for (int ii = 0; ii < Boards[i].Count; ii++)
                     {
-                        for (int i = 0; i < values.Count() - 1; i++)
+                        List<Board> tempbs;
+                        //Create + add them to a list
+                        if (Boards[i][ii].WTurn == isW) { tempbs = Moves(Boards[i][ii], isW); }
+                        else { tempbs = notMe.Moves(Boards[i][ii], !isW); }
+                        //Foreach board generated by moves, add it and its score (by this NN) to temps (the main hub of boards + scores)
+                        List<Board> bestBoards = new List<Board>();
+                        List<double> bestVals = new List<double>();
+                        //Sort and add them
+                        foreach (Board b2 in tempbs)
                         {
-                            if (Move.Value > values[i]) { values[i] = Move.Value; boards[i] = Move.Key; }
-                            else { Move.Key.Dispose(); }
+                            if (!b2.Checks(isW))
+                            {
+                                //Max
+                                if (b2.WTurn != isW)
+                                {
+                                    if (bestBoards.Count == 0) { bestBoards.Add(b2); bestVals.Add(Score(b2, isW)); continue; }
+                                    if (bestBoards.Count < foresight)
+                                    {
+                                        for (int j = 0; j < bestBoards.Count; j++)
+                                        {
+                                            double b2Score = Score(b2, isW);
+                                            if (bestVals.Count >= j && b2Score > bestVals[j]) { bestBoards.Add(b2); bestVals.Add(Score(b2, isW)); continue; }
+                                            else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                                else { b2.Dispose(); continue; }                                                
+                                            }
+                                        }                                      
+                                    }
+                                    else
+                                    {
+                                        double b2Score = Score(b2, isW);
+                                        if (b2Score < bestVals[0]) { b2.Dispose(); continue; }
+                                        else
+                                        {
+                                            for (int j = 0; j < bestBoards.Count; j++) {
+                                                if (b2Score > bestVals[j]) { bestVals[j] = b2Score; bestBoards[j] = b2; continue; }
+                                                else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                                    else { b2.Dispose(); continue; }
+                                                }
+                                                
+                                            }
+                                        }
+                                        
+                                    }
+                                }
+                                //Min
+                                else
+                                {
+                                    if (bestBoards.Count == 0) { bestBoards.Add(b2); bestVals.Add(Score(b2, isW)); continue; }
+                                    if (bestBoards.Count < foresight)
+                                    {
+                                        for (int j = 0; j < bestBoards.Count; j++)
+                                        {
+                                            double b2Score = Score(b2, isW);
+                                            if (bestVals.Count >= j && b2Score < bestVals[j]) { bestBoards.Add(b2); bestVals.Add(Score(b2, isW)); continue; }
+                                            else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                                else { b2.Dispose(); continue; }
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        double b2Score = Score(b2, isW);
+                                        if (b2Score < bestVals[0]) { b2.Dispose(); continue; }
+                                        else
+                                        {
+                                            for (int j = 0; j < bestBoards.Count; j++)
+                                            {
+                                                if (b2Score < bestVals[j]) { bestVals[j] = b2Score; bestBoards[j] = b2; continue; }
+                                                else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                                    else { b2.Dispose(); continue; }
+                                                }
+                                            }
+                                        }
+
+                                    }
+                                }
+                            }
                         }
+                        Boards.Add(bestBoards); Values.Add(bestVals);
                     }
                 }
-                else { Move.Key.Dispose(); }
+                catch (Exception ex) { Console.WriteLine(ex); break; }
             }
+            notMe.Dispose();
 
-            for (int i = 0; i < boards.Count(); i++)
+            //If stale
+            if (Boards.Count <= 1 && !(b.amICheck(isW))) { b.Stale = true; return b; }
+            //If you're in check, include kys as an option
+            if (Boards.Count <= 1 && b.amICheck(isW))
             {
-                //If you lose, don't do it
-                if (isW) { if (boards[i].WCheck) { continue; } }
-                else { if (boards[i].BCheck) { continue; } }
-
-                if (!kvps.ContainsKey(boards[i]))
-                { kvps.Add(boards[i], values[i]); }
+                List<Board> tempbs = Moves(Boards[0][0], isW);
+                //Foreach board generated by moves, add it and its score (by this NN) to temps (the main hub of boards + scores)
+                foreach (Board b2 in tempbs)
+                {
+                    List<Board> b3 = new List<Board>(); List<double> v = new List<double>();
+                    b3.Add(b2); v.Add(Score(b2, isW));
+                    Boards.Add(b3); Values.Add(v);
+                }
             }
-            return kvps;
+           
+            Board bestboard = GoDiePointers.DeepClone(b);
+            double bestVal = -9999999;
+            //Choose a board from the last set of options
+            for (int i = Boards.Count - foresight; i < Boards.Count; i++)
+            {
+                //If better, use it-- the first set of moves (don't need 2 for loops because lists are sorted!)
+                try
+                {
+                    if (Values[i][0] > bestVal) { bestVal = Values[i][0]; bestboard = Boards[1][0]; }
+                    else { Boards[i][0].Dispose(); }
+                }
+                catch (Exception ex) { Console.WriteLine(ex); }
+            }
+            //May not work
+            if (bestboard.amICheck(isW)) { Console.WriteLine("I'm in check"); }
+            return bestboard;
         }
-        public Dictionary<Board, double> Moves(Board b, bool isW)
+ 
+        public List<Board> Moves(Board b, bool isW)
         {
-            Dictionary<Board, double> Moves = new Dictionary<Board, double>();
-            if (b.WTurn != isW) { Console.WriteLine("Not my turn"); return Moves; }
+            List<Board> Moves = new List<Board>();
+            if (b.WTurn != isW)
+            { Console.WriteLine("Not my turn"); return Moves; }
             bool invalid;
             for (int j = 0; j <= 7; j++)
             {
@@ -344,7 +432,7 @@ namespace ChessNN
                                 Board trialBoard = GoDiePointers.DeepClone(b);
                                 try { trialBoard = ((Pawn)trialBoard.Pieces[j, jj]).Move(trialBoard, j + i, jj + ii); }
                                 catch { invalid = true; trialBoard.Dispose(); }
-                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
                             }
                         }
                         continue;
@@ -357,13 +445,13 @@ namespace ChessNN
                             Board trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Rook)trialBoard.Pieces[j, jj]).Move(trialBoard, j + df, jj); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
 
                             invalid = false;
                             trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Rook)trialBoard.Pieces[j, jj]).Move(trialBoard, j, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
                         }
                         continue;
                     }
@@ -377,7 +465,7 @@ namespace ChessNN
                                 Board trialBoard = GoDiePointers.DeepClone(b);
                                 try { trialBoard = ((Knight)trialBoard.Pieces[j, jj]).Move(trialBoard, j + dfx, jj + dfy); }
                                 catch { invalid = true; trialBoard.Dispose(); }
-                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
                             }
                         }
                         continue;
@@ -390,13 +478,13 @@ namespace ChessNN
                             Board trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Bishop)trialBoard.Pieces[j, jj]).Move(trialBoard, j + df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
 
                             invalid = false;
                             trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Bishop)trialBoard.Pieces[j, jj]).Move(trialBoard, j - df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
                         }
                         continue;
                     }
@@ -409,13 +497,13 @@ namespace ChessNN
                             Board trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Queen)trialBoard.Pieces[j, jj]).Move(trialBoard, j + df, jj); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (!trialBoard.amICheck(isW) && trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (!trialBoard.amICheck(isW) && trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
 
                             invalid = false;
                             trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Queen)trialBoard.Pieces[j, jj]).Move(trialBoard, j, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
                         }
                         //Bishop
                         for (int df = -7; df <= 7; df++)
@@ -424,13 +512,13 @@ namespace ChessNN
                             Board trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Queen)trialBoard.Pieces[j, jj]).Move(trialBoard, j + df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
 
                             invalid = false;
                             trialBoard = GoDiePointers.DeepClone(b);
                             try { trialBoard = ((Queen)trialBoard.Pieces[j, jj]).Move(trialBoard, j - df, jj + df); }
                             catch { invalid = true; trialBoard.Dispose(); }
-                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                            if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
                         }
                         continue;
                     }
@@ -444,7 +532,7 @@ namespace ChessNN
                                 Board trialBoard = GoDiePointers.DeepClone(b);
                                 try { trialBoard = ((King)trialBoard.Pieces[j, jj]).Move(trialBoard, j + dfx, jj + dfy); }
                                 catch { invalid = true; trialBoard.Dispose(); }
-                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard, Score(trialBoard, isW)); }
+                                if (trialBoard.Pieces != b.Pieces && !invalid) { Moves.Add(trialBoard); }
                             }
                         }
                         continue;

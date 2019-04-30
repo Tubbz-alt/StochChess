@@ -128,7 +128,7 @@ namespace ChessNN
             Random random = new Random();
 
             //Amount of weights to change
-            int changeCount = 5;
+            int changeCount = 1;
             for (int j = 0; j < changeCount; j++)
             {
                 //For neurons
@@ -238,7 +238,7 @@ namespace ChessNN
                     if (NNW.Score(b, NNW.Player.IsW) > NNB.Score(b, NNB.Player.IsW))
                     { /*Data.WritePieces(b);*/ Data.WriteNs(NNW); }
                     else { /*Data.WritePieces(b2);*/ Data.WriteNs(NNB); }
-                }       
+                }
             }
 
 
@@ -313,10 +313,12 @@ namespace ChessNN
                                         {
                                             double b2Score = Score(b2, isW);
                                             if (bestVals.Count >= j && b2Score > bestVals[j]) { bestBoards.Add(b2); bestVals.Add(Score(b2, isW)); continue; }
-                                            else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
-                                                else { b2.Dispose(); continue; }                                                
+                                            else
+                                            {
+                                                if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                                else { b2.Dispose(); continue; }
                                             }
-                                        }                                      
+                                        }
                                     }
                                     else
                                     {
@@ -324,15 +326,18 @@ namespace ChessNN
                                         if (b2Score < bestVals[0]) { b2.Dispose(); continue; }
                                         else
                                         {
-                                            for (int j = 0; j < bestBoards.Count; j++) {
+                                            for (int j = 0; j < bestBoards.Count; j++)
+                                            {
                                                 if (b2Score > bestVals[j]) { bestVals[j] = b2Score; bestBoards[j] = b2; continue; }
-                                                else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                                else
+                                                {
+                                                    if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
                                                     else { b2.Dispose(); continue; }
                                                 }
-                                                
+
                                             }
                                         }
-                                        
+
                                     }
                                 }
                                 //Min
@@ -345,7 +350,9 @@ namespace ChessNN
                                         {
                                             double b2Score = Score(b2, isW);
                                             if (bestVals.Count >= j && b2Score < bestVals[j]) { bestBoards.Add(b2); bestVals.Add(Score(b2, isW)); continue; }
-                                            else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                            else
+                                            {
+                                                if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
                                                 else { b2.Dispose(); continue; }
                                             }
                                         }
@@ -359,7 +366,9 @@ namespace ChessNN
                                             for (int j = 0; j < bestBoards.Count; j++)
                                             {
                                                 if (b2Score < bestVals[j]) { bestVals[j] = b2Score; bestBoards[j] = b2; continue; }
-                                                else { if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
+                                                else
+                                                {
+                                                    if (j > 1) { bestVals[j - 1] = b2Score; bestBoards[j - 1] = b2; continue; }
                                                     else { b2.Dispose(); continue; }
                                                 }
                                             }
@@ -389,7 +398,7 @@ namespace ChessNN
                     Boards.Add(b3); Values.Add(v);
                 }
             }
-           
+
             Board bestboard = GoDiePointers.DeepClone(b);
             double bestVal = -9999999;
             //Choose a board from the last set of options
@@ -406,10 +415,14 @@ namespace ChessNN
                 catch (Exception ex) { Console.WriteLine(ex); }
             }
             //May not work
-            if (bestboard.amICheck(isW)) { Console.WriteLine("I'm in check"); }
+            if (bestboard.amICheck(isW))
+            {
+                Console.WriteLine("I'm still in check");
+                if (isW) { bestboard.BWin = true; } else { bestboard.WWin = true; }
+            }
             return bestboard;
         }
- 
+
         public List<Board> Moves(Board b, bool isW)
         {
             List<Board> Moves = new List<Board>();

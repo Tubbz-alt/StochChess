@@ -9,8 +9,8 @@ namespace ChessNN
 {
     public class Data
     {
-        private static string Path = @"C:\Users\gwflu\Desktop\Test\Pieces.txt";
-        private static string NPath = @"C:\Users\gwflu\Desktop\Test\Wets.txt";
+        private static string Path = @"H:\Desktop\Testing\Pieces.txt";
+        private static string NPath = @"H:\Desktop\Testing\Wets.txt";
         //Might convert to a diff return type?
         public static int ReadPiece(string pName)
         {
@@ -97,7 +97,7 @@ namespace ChessNN
                         {
                             line = sr.ReadLine();
                             splitLine = line.Split(' ');
-                            for (int ii = 0; ii <= 7; ii++)
+                            for (int ii = 7; ii >= 0; ii--)
                             {
                                 try
                                 {
@@ -145,14 +145,29 @@ namespace ChessNN
                 sw.WriteLine("Neuron" + ' ' + n.layer);
                 if (n.layer == 0)
                 {
-                    for (int i = 0; i <= 7; i++)
+                    if (NN.Player.IsW)
                     {
-                        for (int ii = 0; ii <= 7; ii++)
+                        for (int i = 0; i <= 7; i++)
                         {
-                            sw.Write(Math.Abs(n.weights[i, ii]).ToString());
-                            if (ii < 7) { sw.Write(" "); }
+                            for (int ii = 0; ii <= 7; ii++)
+                            {
+                                sw.Write(Math.Abs(n.weights[i, ii]).ToString());
+                                if (ii < 7) { sw.Write(" "); }
+                            }
+                            sw.WriteLine();
                         }
-                        sw.WriteLine();
+                    }
+                    else
+                    {
+                        for (int i = 7; i >= 0; i--)
+                        {
+                            for (int ii = 7; ii >= 0; ii--)
+                            {
+                                sw.Write(Math.Abs(n.weights[i, ii]).ToString());
+                                if (ii < 7) { sw.Write(" "); }
+                            }
+                            sw.WriteLine();
+                        }
                     }
                 }
                 else

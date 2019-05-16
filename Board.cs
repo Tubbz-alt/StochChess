@@ -63,7 +63,18 @@ namespace ChessNN
             };
             return tempPieces;
         }
-
+        public static Array[,] Flip(Array[,] a)
+        {
+            Array[,] a2 = new Array[8, 8];
+            for (int i = 0; i <= 7; i++)
+            {
+                for (int ii = 0; ii <= 7; ii++)
+                {
+                    a2[i, ii] = a[7 - 1, 7 - ii];
+                }
+            }
+            return a2;
+        }
         /// <summary>
         /// Checks if one is in check
         /// </summary>

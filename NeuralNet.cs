@@ -197,8 +197,8 @@ namespace ChessNN
             //Using two boards to allow for different piece cvals, unless I want to put that into the NN class?
             while (i <= moveCap && !b.WWin && !b.BWin && !b2.WWin && !b2.BWin && !b.Stale && !b2.Stale)
             {
-                if (b.WTurn) { b2.Pieces = NNW.Move(b.Flip(), true).Pieces; Board.PrintBoard(b2.Flip()); b2.WTurn = false; i++; }
-                if (!b2.WTurn) { b.Pieces = NNB.Move(b2.Flip(), false).Pieces; Board.PrintBoard(b.Flip()); b.WTurn = true; i++; }
+                if (b.WTurn) { b2.Pieces = NNW.Move(b, true).Pieces; Board.PrintBoard(b2); b2.WTurn = false; i++; }
+                if (!b2.WTurn) { b.Pieces = NNB.Move(b2, false).Pieces; Board.PrintBoard(b); b.WTurn = true; i++; }
                 else { Console.WriteLine("NN Failure"); break; }
             }
             //Will need to check whether pieces read/write properly in the future
@@ -278,7 +278,7 @@ namespace ChessNN
             List<List<double>> Values = new List<List<double>>();
             Values.Add(startVal);
             //Create the lists
-            for (int i = 0; i < foresight * foresight; i++)
+            for (int i = 0; i < foresight; i++)
             {
                 try
                 {
@@ -380,7 +380,8 @@ namespace ChessNN
                         }
                     }
                 }
-                catch (Exception ex) { Console.WriteLine(ex); Console.WriteLine("i: " + i.ToString() + " Boards.Count(): " + Boards.Count()); break; }
+                catch (Exception ex) { Console.WriteLine(ex); Console.WriteLine("\ni: " + i.ToString() + " Boards.Count(): " 
+                    + Boards.Count() + " foresight^2:" + (foresight * foresight).ToString()); break; }
             }
             notMe.Dispose();
 
@@ -425,6 +426,8 @@ namespace ChessNN
 
         public List<Board> Moves(Board b, bool isW)
         {
+            b.AdjustFlip(isW);
+
             List<Board> Moves = new List<Board>();
             if (b.WTurn != isW)
             { Console.WriteLine("Not my turn"); return Moves; }

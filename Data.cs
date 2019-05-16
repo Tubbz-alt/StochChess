@@ -74,38 +74,18 @@ namespace ChessNN
                     int.TryParse(splitLine[1], out int result);
                     Neuron n = new Neuron(NN, 0, result);
                     //Flip it if it's black to match board perspective
-                    if (NN.Player.IsW)
+                    for (int i = 0; i <= 7; i++)
                     {
-                        for (int i = 0; i <= 7; i++)
+                        line = sr.ReadLine();
+                        splitLine = line.Split(' ');
+                        for (int ii = 0; ii <= 7; ii++)
                         {
-                            line = sr.ReadLine();
-                            splitLine = line.Split(' ');
-                            for (int ii = 0; ii <= 7; ii++)
+                            try
                             {
-                                try
-                                {
-                                    double.TryParse(splitLine[ii], out double result2);
-                                    n.weights[i, ii] = result2;
-                                }
-                                catch (Exception ex) { Console.WriteLine(ex); }
+                                double.TryParse(splitLine[ii], out double result2);
+                                n.weights[i, ii] = result2;
                             }
-                        }
-                    }
-                    else
-                    {
-                        for (int i = 7; i >= 0; i--)
-                        {
-                            line = sr.ReadLine();
-                            splitLine = line.Split(' ');
-                            for (int ii = 7; ii >= 0; ii--)
-                            {
-                                try
-                                {
-                                    double.TryParse(splitLine[ii], out double result2);
-                                    n.weights[i, ii] = result2;
-                                }
-                                catch (Exception ex) { Console.WriteLine(ex); }
-                            }
+                            catch (Exception ex) { Console.WriteLine(ex); }
                         }
                     }
                 }
@@ -145,29 +125,14 @@ namespace ChessNN
                 sw.WriteLine("Neuron" + ' ' + n.layer);
                 if (n.layer == 0)
                 {
-                    if (NN.Player.IsW)
+                    for (int i = 0; i <= 7; i++)
                     {
-                        for (int i = 0; i <= 7; i++)
+                        for (int ii = 0; ii <= 7; ii++)
                         {
-                            for (int ii = 0; ii <= 7; ii++)
-                            {
-                                sw.Write(Math.Abs(n.weights[i, ii]).ToString());
-                                if (ii < 7) { sw.Write(" "); }
-                            }
-                            sw.WriteLine();
+                            sw.Write(Math.Abs(n.weights[i, ii]).ToString());
+                            if (ii < 7) { sw.Write(" "); }
                         }
-                    }
-                    else
-                    {
-                        for (int i = 7; i >= 0; i--)
-                        {
-                            for (int ii = 7; ii >= 0; ii--)
-                            {
-                                sw.Write(Math.Abs(n.weights[i, ii]).ToString());
-                                if (ii < 7) { sw.Write(" "); }
-                            }
-                            sw.WriteLine();
-                        }
+                        sw.WriteLine();
                     }
                 }
                 else

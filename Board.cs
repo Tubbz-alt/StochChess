@@ -15,6 +15,7 @@ namespace ChessNN
         public bool Stale = false;
         public bool WCheck = false;
         public bool BCheck = false;
+        public bool isFlipped = false;
         public Board(Player p1, Player p2, Piece[,] pieces, bool wturn)
         {
             P1 = p1; P2 = p2; Pieces = pieces; WTurn = wturn;
@@ -63,17 +64,26 @@ namespace ChessNN
             };
             return tempPieces;
         }
-        public static Array[,] Flip(Array[,] a)
+        public Board Flip()
         {
-            Array[,] a2 = new Array[8, 8];
+            Piece[,] a2 = new Piece[8, 8];
             for (int i = 0; i <= 7; i++)
             {
                 for (int ii = 0; ii <= 7; ii++)
                 {
-                    a2[i, ii] = a[7 - 1, 7 - ii];
+                    a2[i, ii] = GoDiePointers.DeepClone(Pieces[7 - i, 7 - ii]);
+                    a2[i, ii].PosX = i; a2[i, ii].PosY = ii;
                 }
             }
-            return a2;
+            Pieces = a2;
+            isFlipped = !isFlipped;
+            return this;
+        }
+        public Board AdjustFlip(bool isW)
+        {
+            if (isW && isFlipped) { Pieces = Flip().Pieces; }
+            if (!isW && !isFlipped) { Pieces = Flip().Pieces; }
+            return this;
         }
         /// <summary>
         /// Checks if one is in check
@@ -306,13 +316,19 @@ namespace ChessNN
                             {
                                 try
                                 {
-                                    if (Pieces[p.PosX + i, p.PosY + i] is King || (Pieces[p.PosX + i, p.PosY + i] is Pawn && Pieces[p.PosX + i, p.PosY + i].Player.IsW != isW)) { kingpawn = true; }
+                                    if (Pieces[p.PosX + i, p.PosY + i] is King 
+                                        || (Pieces[p.PosX + i, p.PosY + i] is Pawn 
+                                        && Pieces[p.PosX + i, p.PosY + i].Player.IsW != isW))
+                                    { kingpawn = true; }
                                     else { if (kingpawn != true) { kingpawn = false; } }
                                 }
                                 catch { if (kingpawn != true) { kingpawn = false; } }
                                 try
                                 {
-                                    if (Pieces[p.PosX - i, p.PosY + i] is King || (Pieces[p.PosX - i, p.PosY + i] is Pawn && Pieces[p.PosX - i, p.PosY + i].Player.IsW != isW)) { kingpawn = true; }
+                                    if (Pieces[p.PosX - i, p.PosY + i] is King 
+                                        || (Pieces[p.PosX - i, p.PosY + i] is Pawn
+                                        && Pieces[p.PosX - i, p.PosY + i].Player.IsW != isW))
+                                    { kingpawn = true; }
                                     else { if (kingpawn != true) { kingpawn = false; } }
                                 }
                                 catch { if (kingpawn != true) { kingpawn = false; } }
@@ -328,7 +344,6 @@ namespace ChessNN
                                     else { if (kingpawn != true) { kingpawn = false; } }
                                 }
                                 catch { if (kingpawn != true) { kingpawn = false; } }
-
                             }
                         }
 

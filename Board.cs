@@ -15,7 +15,6 @@ namespace ChessNN
         public bool Stale = false;
         public bool WCheck = false;
         public bool BCheck = false;
-        public bool isFlipped = false;
         public Board(Player p1, Player p2, Piece[,] pieces, bool wturn)
         {
             P1 = p1; P2 = p2; Pieces = pieces; WTurn = wturn;
@@ -64,26 +63,24 @@ namespace ChessNN
             };
             return tempPieces;
         }
-        public Board Flip()
+        public static Piece[,] Flip(Piece[,] p)
         {
             Piece[,] a2 = new Piece[8, 8];
             for (int i = 0; i <= 7; i++)
             {
                 for (int ii = 0; ii <= 7; ii++)
                 {
-                    a2[i, ii] = GoDiePointers.DeepClone(Pieces[7 - i, 7 - ii]);
+                    a2[i, ii] = GoDiePointers.DeepClone(p[7 - i, 7 - ii]);
                     a2[i, ii].PosX = i; a2[i, ii].PosY = ii;
                 }
             }
-            Pieces = a2;
-            isFlipped = !isFlipped;
-            return this;
+            return a2;
         }
-        public Board AdjustFlip(bool isW)
+        public static Piece[,] AdjustFlip(Piece[,] p, bool isW)
         {
-            if (isW && isFlipped) { Pieces = Flip().Pieces; }
-            if (!isW && !isFlipped) { Pieces = Flip().Pieces; }
-            return this;
+            Piece[,] pieces = GoDiePointers.DeepClone(p);
+            if (!isW) { pieces = Flip(pieces); }
+            return pieces;
         }
         /// <summary>
         /// Checks if one is in check

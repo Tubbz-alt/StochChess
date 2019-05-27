@@ -19,8 +19,8 @@ namespace ChessNN
         public Neuron Output { get; set; }
         public int depth { get; set; }
         public int count { get; set; }
-        //Only works at 2? Needs testing
-        public int foresight = 2;
+        //Amount of moves the NN looks into the future
+        public int foresight = 3;
         public void initNN()
         {
             try

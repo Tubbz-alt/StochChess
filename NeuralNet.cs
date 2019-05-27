@@ -285,7 +285,8 @@ namespace ChessNN
             List<List<double>> Values = new List<List<double>>();
             Values.Add(startVal);
             //Create the lists
-            for (int i = 0; i < foresight * foresight; i++)
+            //Efficiency is foresight^2 boards per unit foresight
+            for (int i = 0; i < foresight; i++)
             {
                 try
                 {
@@ -404,9 +405,16 @@ namespace ChessNN
                     Boards.Add(b3); Values.Add(v);
                 }
             }
-
             Board bestboard = GoDiePointers.DeepClone(b);
             double bestVal = -9999999;
+
+            if (Boards.Count() == 1)
+            {
+                Console.WriteLine("Board write error");
+                if (isW) { bestboard.BWin = true; return bestboard; }
+                else { bestboard.WWin = true; return bestboard; }
+            }
+
             //Choose a board from the last set of options
             for (int i = Boards.Count - foresight; i < Boards.Count; i++)
             {
